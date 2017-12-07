@@ -22,6 +22,7 @@ from model.ner_dataset import *
 
 zip = getattr(itertools, 'izip', zip)
 
+unk_label = '<unk>'  # This label should be used to mask back propagation
 
 def to_scalar(var):
     """change the first element of a tensor to scalar
@@ -500,7 +501,7 @@ def construct_bucket_mean_vb(input_features, input_label, word_dict, label_dict,
 
     thresholds = calc_threshold_mean(features)
 
-    return construct_bucket_vb(features, labels, thresholds, word_dict['<eof>'], label_dict['<pad>'], len(label_dict))
+    return construct_bucket_vb(features, labels, thresholds, word_dict['<eof>'], label_dict['<pad>'], len(label_dict), label_dict.get(unk_label))
 
 def construct_bucket_mean_vb_wc(word_features, input_label, label_dict, char_dict, word_dict, caseless):
     """
@@ -572,7 +573,7 @@ def construct_bucket_vb_wc(word_features, forw_features, fea_len, input_labels, 
     return bucket_dataset, forw_corpus, back_corpus
 
 
-def construct_bucket_vb(input_features, input_labels, thresholds, pad_feature, pad_label, label_size):
+def construct_bucket_vb(input_features, input_labels, thresholds, pad_feature, pad_label, label_size, unk_label=-100):
     """
     Construct bucket by thresholds for viterbi decode, word-level only
     """
@@ -587,7 +588,8 @@ def construct_bucket_vb(input_features, input_labels, thresholds, pad_feature, p
         buckets[idx][1].append([label[ind] * label_size + label[ind + 1] for ind in range(0, cur_len)] + [
             label[cur_len] * label_size + pad_label] + [pad_label * label_size + pad_label] * (
                                    thresholds[idx] - cur_len_1))
-        buckets[idx][2].append([1] * cur_len_1 + [0] * (thresholds[idx] - cur_len_1))
+        buckets[idx][2].append(
+            [int(label[i + 1] != unk_label) for i in range(0, cur_len)] + [1] + [0] * (thresholds[idx] - cur_len_1))
     bucket_dataset = [CRFDataset(torch.LongTensor(bucket[0]), torch.LongTensor(bucket[1]), torch.ByteTensor(bucket[2]))
                       for bucket in buckets]
     return bucket_dataset
