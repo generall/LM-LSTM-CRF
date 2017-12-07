@@ -521,9 +521,9 @@ def construct_bucket_mean_vb_wc(word_features, input_label, label_dict, char_dic
         word_features = list(map(lambda t: list(map(lambda x: x.lower(), t)), word_features))
     word_features = encode_safe(word_features, word_dict, word_dict['<unk>'])
 
-    return construct_bucket_vb_wc(word_features, forw_features, fea_len, labels, thresholds, word_dict['<eof>'], char_dict['\n'], label_dict['<pad>'], len(label_dict))
+    return construct_bucket_vb_wc(word_features, forw_features, fea_len, labels, thresholds, word_dict['<eof>'], char_dict['\n'], label_dict['<pad>'], len(label_dict), label_dict.get(unk_label))
 
-def construct_bucket_vb_wc(word_features, forw_features, fea_len, input_labels, thresholds, pad_word_feature, pad_char_feature, pad_label, label_size):
+def construct_bucket_vb_wc(word_features, forw_features, fea_len, input_labels, thresholds, pad_word_feature, pad_char_feature, pad_label, label_size, unk_label=-100):
     """
     Construct bucket by thresholds for viterbi decode, word-level and char-level
     """
@@ -564,12 +564,12 @@ def construct_bucket_vb_wc(word_features, forw_features, fea_len, input_labels, 
         buckets[idx][3].append([buckets_len[idx] - 1] + [buckets_len[idx] - 1 - tup for tup in padded_feature_len_cum[:-1]])
         buckets[idx][4].append(w_f + [pad_word_feature] * (thresholds[idx] - cur_len)) #word
         buckets[idx][5].append([i_l[ind] * label_size + i_l[ind + 1] for ind in range(0, cur_len)] + [i_l[cur_len] * label_size + pad_label] + [pad_label * label_size + pad_label] * (thresholds[idx] - cur_len_1))  # has additional start, label
-        buckets[idx][6].append([1] * cur_len_1 + [0] * (thresholds[idx] - cur_len_1))  # has additional start, mask
+        buckets[idx][6].append([int(i_l[i + 1] != unk_label) for i in range(0, cur_len)] + [1] + [0] * (thresholds[idx] - cur_len_1))  # has additional start, mask
         buckets[idx][7].append([len(f_f) + thresholds[idx] - len(f_l), cur_len_1])
     bucket_dataset = [CRFDataset_WC(torch.LongTensor(bucket[0]), torch.LongTensor(bucket[1]),
                                    torch.LongTensor(bucket[2]), torch.LongTensor(bucket[3]),
                                    torch.LongTensor(bucket[4]), torch.LongTensor(bucket[5]), 
-                                   torch.ByteTensor(bucket[6]), torch.LongTensor(bucket[7])) for bucket in buckets]
+                                   torch.ByteTensor(bucket[6]), torch.LongTensor(bucket[7])) for bucket in buckets  if len(bucket[0]) > 0]
     return bucket_dataset, forw_corpus, back_corpus
 
 
@@ -591,7 +591,7 @@ def construct_bucket_vb(input_features, input_labels, thresholds, pad_feature, p
         buckets[idx][2].append(
             [int(label[i + 1] != unk_label) for i in range(0, cur_len)] + [1] + [0] * (thresholds[idx] - cur_len_1))
     bucket_dataset = [CRFDataset(torch.LongTensor(bucket[0]), torch.LongTensor(bucket[1]), torch.ByteTensor(bucket[2]))
-                      for bucket in buckets]
+                      for bucket in buckets if len(bucket[0]) > 0]
     return bucket_dataset
 
 
