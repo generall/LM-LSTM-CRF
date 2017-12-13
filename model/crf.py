@@ -246,6 +246,22 @@ class CRFLoss_gd(nn.Module):
         current_score = torch.gather(scores, 1, current).squeeze()
         return self.crit(current_score, target)
 
+class CrossEntropyCRFLoss:
+    IGNORE_VALUE = -100
+
+    def __init__(self):
+        self.crit_ce = nn.CrossEntropyLoss()
+
+    def forward(self, scores, targets, mask):
+        seq_len = scores.size(0)
+        bat_size = scores.size(1)
+        scores = scores.view(seq_len * bat_size, -1)
+        targets = targets.view(seq_len * bat_size, -1)
+        mask = mask.view(seq_len * bat_size, -1)
+        inv_mask = 1 + (-1) * mask
+        targets[inv_mask] = self.IGNORE_VALUE
+        loss = self.crit_ce(scores, targets.view(-1))
+        return loss
 
 class CRFLoss_vb(nn.Module):
     """loss for viterbi decode

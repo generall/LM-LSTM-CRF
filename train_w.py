@@ -135,11 +135,11 @@ if __name__ == "__main__":
     elif args.update == 'adam':
         optimizer = optim.Adam(ner_model.parameters(), lr=args.lr)
 
-
     if args.load_check_point and args.load_opt:
         optimizer.load_state_dict(checkpoint_file['optimizer'])
 
-    crit = CRFLoss_vb(len(l_map), l_map['<start>'], l_map['<pad>'])
+    #crit = CRFLoss_vb(len(l_map), l_map['<start>'], l_map['<pad>'])
+    crit = CrossEntropyCRFLoss()
 
     if args.gpu >= 0:
         if_cuda = True
