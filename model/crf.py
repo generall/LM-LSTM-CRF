@@ -253,6 +253,7 @@ class CrossEntropyCRFLoss:
         self.crit_ce = nn.CrossEntropyLoss()
 
     def forward(self, scores, targets, mask):
+        targets = targets.clone()
         seq_len = scores.size(0)
         bat_size = scores.size(1)
         scores = scores.view(seq_len * bat_size, -1)
