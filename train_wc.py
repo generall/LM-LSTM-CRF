@@ -151,7 +151,7 @@ if __name__ == "__main__":
         optimizer.load_state_dict(checkpoint_file['optimizer'])
 
     crit_lm = nn.CrossEntropyLoss()
-    crit_ner = CRFLoss_vb(len(l_map), l_map['<start>'], l_map['<pad>'])
+    crit_ner = CrossEntropyCRFLoss()#CRFLoss_vb(len(l_map), l_map['<start>'], l_map['<pad>'])
 
     if args.gpu >= 0:
         if_cuda = True
